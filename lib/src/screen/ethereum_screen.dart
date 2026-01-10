@@ -1,29 +1,20 @@
-import 'package:bit_saifu/src/lib/bitcoin/data/repository.dart';
-import 'package:bit_saifu/src/lib/secure/secure_key_store.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
-import 'package:bit_saifu/src/components/common/send_transaction_input_view.dart';
-import 'package:bit_saifu/src/lib/bitcoin/crypto/bitcoin.dart';
-import 'package:bit_saifu/src/lib/bitcoin/domain/usecase/usecase.dart';
+import 'package:bit_saifu/src/lib/ethereum/ethereum.dart';
 
-class BitcoinPage extends StatefulWidget {
-  const BitcoinPage({super.key});
+class EthereumPage extends StatefulWidget {
+  const EthereumPage({super.key});
 
   @override
-  State<BitcoinPage> createState() => _BitcoinPageState();
+  State<EthereumPage> createState() => _EthereumPageState();
 }
 
-class _BitcoinPageState extends State<BitcoinPage> {
-  static const storageKey = 'bitcoin_addresses';
+class _EthereumPageState extends State<EthereumPage> {
+  static const storageKey = 'ethereum_addresses';
 
   List<String> addresses = [];
-  final BitcoinRepository _bitcoinRepository = BitcoinRepository();
-  final CalcBalanceUseCase _calcBalance = CalcBalanceUseCase();
-  final SelectUtxoUseCase _selectUtxo = SelectUtxoUseCase();
-
-  final BitcoinCrypto _bitcoinCrypto = BitcoinCrypto();
 
   @override
   void initState() {
@@ -45,14 +36,11 @@ class _BitcoinPageState extends State<BitcoinPage> {
     await prefs.setStringList(storageKey, addresses);
   }
 
-  /// 新しいアドレス生成
-  void generateAddress() async {
-    final useCase = CreateBitcoinAddressUseCase(bitcoinCrypto: _bitcoinCrypto);
-    final (address, privateKey, _) = useCase.execute();
-
-    // 秘密鍵を安全に保存
-    final secureKeyStore = SecureKeyStore();
-    await secureKeyStore.savePrivateKey(address, privateKey);
+  /// 新しいEthereumアドレス生成
+  void generateAddress() {
+    final privateKey = EthereumKeyGenerator.generatePrivateKey();
+    final publicKey = EthereumKeyGenerator.privateKeyToPublicKey(privateKey);
+    final address = EthereumKeyGenerator.publicKeyToAddress(publicKey);
 
     setState(() {
       addresses.add(address);
@@ -62,82 +50,28 @@ class _BitcoinPageState extends State<BitcoinPage> {
   }
 
   /// アドレス削除
-  void deleteAddress(String address) async {
+  void deleteAddress(String address) {
     setState(() {
-      addresses.removeWhere((a) => a == address);
+      addresses.removeWhere((e) => e == address);
     });
+    _saveAddresses();
 
-    final secureKeyStore = SecureKeyStore();
-    await secureKeyStore.deletePrivateKey(address);
-    await _saveAddresses();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('アドレスを削除しました')),
-      );
-    }
-  }
-
-  /// Explorerを開く
-  Future<void> openExplorer(String address) async {
-    final url = Uri.parse(
-        // 'https://www.blockchain.com/explorer/search?search=$address',
-        "https://blockstream.info/testnet/address/$address");
-    await launchUrl(url, mode: LaunchMode.externalApplication);
-  }
-
-  void showSendViewBottomSheet(String address, double balance) {
-    final balanceSatoshi = (balance * satoshiPerBtc).toInt();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: SafeArea(
-            top: false,
-            child: SendTransactionInputView(
-              balanceSatoshi: balanceSatoshi,
-              onClose: () => Navigator.of(context).pop(),
-              onSubmit: (
-                  {required address,
-                  required amountSatoshi,
-                  required feeRate}) async {
-                Navigator.pop(context);
-                debugPrint('To: $address');
-                debugPrint('Amount: $amountSatoshi satoshi');
-                debugPrint('Fee Rate: $feeRate sat/vByte');
-                final allUtxos =
-                    await _bitcoinRepository.collectAllUtxos(addresses);
-
-                final result = _selectUtxo.execute(
-                  utxos: allUtxos,
-                  sendAmountSatoshi: amountSatoshi,
-                  feeRate: 5, // 例：5 sat/vByte
-                );
-
-                debugPrint('Inputs: ${result.selectedUtxos.length}');
-                debugPrint('Fee: ${result.fee} sat');
-                debugPrint('Change: ${result.change} sat');
-                debugPrint('TxSize: ${result.txSize} vB');
-              },
-            ),
-          ),
-        );
-      },
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('アドレスを削除しました')),
     );
   }
 
-  // QRコードを表示するダイアログ
-  void showQrDialog(String address) async {
-    final utxos = await _bitcoinRepository.getUtxos(address);
-    final balance = _calcBalance.execute(utxos);
-    if (!mounted) return;
+  /// Etherscan を開く
+  Future<void> openExplorer(String address) async {
+    final url = Uri.parse(
+      // 'https://etherscan.io/address/$address',
+      'https://sepolia.etherscan.io/address/$address',
+    );
+    await launchUrl(url, mode: LaunchMode.externalApplication);
+  }
+
+  /// QRコードダイアログ
+  void showQrDialog(String address) {
     showDialog(
       context: context,
       builder: (context) {
@@ -148,32 +82,21 @@ class _BitcoinPageState extends State<BitcoinPage> {
           ),
           child: Stack(
             children: [
-              // メインコンテンツ
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'Receive Bitcoin',
+                      'Receive Ethereum',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-
-                    // 残高を表示
-                    Text(
-                      'Balance: $balance BTC',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
-                      ),
-                    ),
-
                     const SizedBox(height: 16),
-                    // QRコード
+
+                    // QR
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -217,78 +140,12 @@ class _BitcoinPageState extends State<BitcoinPage> {
                       width: double.infinity,
                       child: FilledButton.icon(
                         icon: const Icon(Icons.open_in_new),
-                        label: const Text('Explorerを開く'),
+                        label: const Text('Etherscanを開く'),
                         onPressed: () {
                           Navigator.of(context).pop();
                           openExplorer(address);
                         },
                       ),
-                    ),
-
-                    // utxoを表示
-                    const SizedBox(height: 16),
-
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'UTXO',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: utxos.length,
-                      itemBuilder: (context, index) {
-                        final utxo = utxos[index];
-                        final btcValue = _calcBalance.execute([utxo]);
-
-                        return Card(
-                          elevation: 1,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Amount: $btcValue BTC',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'txid: ${utxo.txid}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                Text(
-                                  'vout: ${utxo.vout}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
                     ),
 
                     TextButton(
@@ -299,10 +156,10 @@ class _BitcoinPageState extends State<BitcoinPage> {
                 ),
               ),
 
-              // 左上の削除ボタン
+              // 削除ボタン
               Positioned(
                 top: 8,
-                left: 8,
+                right: 8,
                 child: IconButton(
                   tooltip: '削除',
                   icon: Icon(
@@ -311,22 +168,6 @@ class _BitcoinPageState extends State<BitcoinPage> {
                   ),
                   onPressed: () {
                     showDeleteConfirmDialog(address);
-                  },
-                ),
-              ),
-
-              // 右上の送金ボタン
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  tooltip: '送金',
-                  icon: Icon(
-                    Icons.send,
-                    color: Colors.blue.shade400,
-                  ),
-                  onPressed: () {
-                    showSendViewBottomSheet(address, balance);
                   },
                 ),
               ),
@@ -357,8 +198,8 @@ class _BitcoinPageState extends State<BitcoinPage> {
                 backgroundColor: Colors.red,
               ),
               onPressed: () {
-                Navigator.of(context).pop(); // confirm dialog
-                Navigator.of(context).pop(); // QR dialog
+                Navigator.of(context).pop(); // confirm
+                Navigator.of(context).pop(); // qr
                 deleteAddress(address);
               },
               child: const Text('削除'),
@@ -367,12 +208,6 @@ class _BitcoinPageState extends State<BitcoinPage> {
         );
       },
     );
-  }
-
-  Future<bool> isCheckPrivateKey(String address) async {
-    final secureKeyStore = SecureKeyStore();
-    final key = await secureKeyStore.loadPrivateKey(address);
-    return key != null;
   }
 
   @override
@@ -390,7 +225,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Bitcoin Wallet',
+                  'Ethereum Wallet',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -398,7 +233,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Receive addresses Testnet',
+                  'Receive addresses Sepolia',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey,
@@ -430,6 +265,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
                 return Dismissible(
                   key: ValueKey(address),
                   direction: DismissDirection.endToStart,
+                  onDismissed: (_) => deleteAddress(address),
                   background: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(

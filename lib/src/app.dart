@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bit_saifu/src/screen/home_screen.dart';
+import 'package:bit_saifu/src/screen/ethereum_screen.dart';
+import 'package:bit_saifu/src/screen/main_tab_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -13,7 +15,11 @@ class MyApp extends StatelessWidget {
         colorSchemeSeed: const Color(0xFFF7931A),
         brightness: Brightness.light,
       ),
-      home: const BitcoinPage(),
+      home: const MainTabScreen(),
+      routes: {
+        '/ethereum': (context) => const EthereumPage(),
+        '/bitcoin': (context) => const BitcoinPage(),
+      },
     );
   }
 }
