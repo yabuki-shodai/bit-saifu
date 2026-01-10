@@ -1,8 +1,8 @@
 import 'package:bit_saifu/src/lib/bitcoin/data/bitcoin_api.dart';
 import 'package:bit_saifu/src/lib/bitcoin/domain/entity/utxo.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:bit_saifu/src/lib/secure/secure_key_store.dart';
 import 'dart:typed_data';
+import 'package:bit_saifu/src/lib/secure/secure_key_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BitcoinRepository {
   static const storageKey = 'bitcoin_addresses';
@@ -30,11 +30,6 @@ class BitcoinRepository {
     return prefs.getStringList(storageKey) ?? <String>[];
   }
 
-  Future<void> deleteAddress(String address, List<String> addresses) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(storageKey, addresses);
-  }
-
   Future<void> saveAddresses(List<String> addresses) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(storageKey, addresses);
@@ -43,5 +38,15 @@ class BitcoinRepository {
   Future<void> savePrivateKey(String address, Uint8List privateKey) async {
     final secureKeyStore = SecureKeyStore();
     await secureKeyStore.savePrivateKey(address, privateKey);
+  }
+
+  Future<Uint8List?> loadPrivateKey(String address) async {
+    final secureKeyStore = SecureKeyStore();
+    return secureKeyStore.loadPrivateKey(address);
+  }
+
+  Future<void> deletePrivateKey(String address) async {
+    final secureKeyStore = SecureKeyStore();
+    await secureKeyStore.deletePrivateKey(address);
   }
 }

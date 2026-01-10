@@ -1,12 +1,8 @@
-import 'package:bit_saifu/src/lib/bitcoin/data/repository.dart';
-import 'package:bit_saifu/src/lib/secure/secure_key_store.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:bit_saifu/src/components/common/send_transaction_input_view.dart';
-import 'package:bit_saifu/src/lib/bitcoin/crypto/bitcoin.dart';
-import 'package:bit_saifu/src/lib/bitcoin/domain/usecase/usecase.dart';
-import 'package:bit_saifu/src/lib/core/private_key/repository.dart';
+import 'package:bit_saifu/src/lib/bitcoin/service/bitcoin_service.dart';
 
 class BitcoinPage extends StatefulWidget {
   const BitcoinPage({super.key});
@@ -17,12 +13,7 @@ class BitcoinPage extends StatefulWidget {
 
 class _BitcoinPageState extends State<BitcoinPage> {
   List<String> addresses = [];
-  final BitcoinRepository _bitcoinRepository = BitcoinRepository();
-  final CalcBalanceUseCase _calcBalance = CalcBalanceUseCase();
-  final SelectUtxoUseCase _selectUtxo = SelectUtxoUseCase();
-  final PrivateKeyRepository _privateKeyRepository =
-      PrivateKeyRepository(secureKeyStore: SecureKeyStore());
-  final BitcoinCrypto _bitcoinCrypto = BitcoinCrypto();
+  final BitcoinService _bitcoinService = BitcoinService();
 
   @override
   void initState() {
@@ -32,7 +23,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
 
   /// 保存済みアドレスを読み込む
   Future<void> _loadAddresses() async {
-    final items = await _bitcoinRepository.getAllAddresses();
+    final items = await _bitcoinService.loadAddresses();
     if (!mounted) return;
     setState(() {
       addresses = items;
@@ -41,16 +32,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
 
   /// 新しいアドレス生成
   void generateAddress() async {
-    final createUseCase =
-        CreateBitcoinAddressUseCase(bitcoinCrypto: _bitcoinCrypto);
-    final (address, privateKey, _) = createUseCase.execute();
-
-    final saveUseCase = SaveBitcoinAddressAndPrivateKeyUseCase(
-      bitcoinRepository: _bitcoinRepository,
-      privateKeyRepository: _privateKeyRepository,
-    );
-
-    final updated = await saveUseCase.execute(address, privateKey);
+    final updated = await _bitcoinService.createAddress();
     if (!mounted) return;
     setState(() {
       addresses = updated;
@@ -59,12 +41,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
 
   /// アドレス削除
   void deleteAddress(String address) async {
-    final deleteUseCase = DeleteAddressUseCase(
-      bitcoinRepository: _bitcoinRepository,
-      privateKeyRepository: _privateKeyRepository,
-    );
-
-    final updated = await deleteUseCase.execute(address);
+    final updated = await _bitcoinService.deleteAddress(address);
     if (!mounted) return;
     setState(() {
       addresses = updated;
@@ -110,9 +87,9 @@ class _BitcoinPageState extends State<BitcoinPage> {
                 debugPrint('Amount: $amountSatoshi satoshi');
                 debugPrint('Fee Rate: $feeRate sat/vByte');
                 final allUtxos =
-                    await _bitcoinRepository.collectAllUtxos(addresses);
+                    await _bitcoinService.collectAllUtxos(addresses);
 
-                final result = _selectUtxo.execute(
+                final result = _bitcoinService.selectUtxos(
                   utxos: allUtxos,
                   sendAmountSatoshi: amountSatoshi,
                   feeRate: 5, // 例：5 sat/vByte
@@ -132,8 +109,8 @@ class _BitcoinPageState extends State<BitcoinPage> {
 
   // QRコードを表示するダイアログ
   void showQrDialog(String address) async {
-    final utxos = await _bitcoinRepository.getUtxos(address);
-    final balance = _calcBalance.execute(utxos);
+    final utxos = await _bitcoinService.getUtxos(address);
+    final balance = _bitcoinService.calcBalance(utxos);
     if (!mounted) return;
     showDialog(
       context: context,
@@ -244,7 +221,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
                       itemCount: utxos.length,
                       itemBuilder: (context, index) {
                         final utxo = utxos[index];
-                        final btcValue = _calcBalance.execute([utxo]);
+                        final btcValue = _bitcoinService.calcBalance([utxo]);
 
                         return Card(
                           elevation: 1,
@@ -367,8 +344,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
   }
 
   Future<bool> isCheckPrivateKey(String address) async {
-    final secureKeyStore = SecureKeyStore();
-    final key = await secureKeyStore.loadPrivateKey(address);
+    final key = await _bitcoinService.loadPrivateKey(address);
     return key != null;
   }
 
