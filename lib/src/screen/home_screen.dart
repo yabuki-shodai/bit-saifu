@@ -1,12 +1,12 @@
 import 'package:bit_saifu/src/lib/bitcoin/data/repository.dart';
 import 'package:bit_saifu/src/lib/secure/secure_key_store.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:bit_saifu/src/components/common/send_transaction_input_view.dart';
 import 'package:bit_saifu/src/lib/bitcoin/crypto/bitcoin.dart';
 import 'package:bit_saifu/src/lib/bitcoin/domain/usecase/usecase.dart';
+import 'package:bit_saifu/src/lib/core/private_key/repository.dart';
 
 class BitcoinPage extends StatefulWidget {
   const BitcoinPage({super.key});
@@ -16,13 +16,12 @@ class BitcoinPage extends StatefulWidget {
 }
 
 class _BitcoinPageState extends State<BitcoinPage> {
-  static const storageKey = 'bitcoin_addresses';
-
   List<String> addresses = [];
   final BitcoinRepository _bitcoinRepository = BitcoinRepository();
   final CalcBalanceUseCase _calcBalance = CalcBalanceUseCase();
   final SelectUtxoUseCase _selectUtxo = SelectUtxoUseCase();
-
+  final PrivateKeyRepository _privateKeyRepository =
+      PrivateKeyRepository(secureKeyStore: SecureKeyStore());
   final BitcoinCrypto _bitcoinCrypto = BitcoinCrypto();
 
   @override
@@ -33,49 +32,47 @@ class _BitcoinPageState extends State<BitcoinPage> {
 
   /// 保存済みアドレスを読み込む
   Future<void> _loadAddresses() async {
-    final prefs = await SharedPreferences.getInstance();
+    final items = await _bitcoinRepository.getAllAddresses();
+    if (!mounted) return;
     setState(() {
-      addresses = prefs.getStringList(storageKey) ?? [];
+      addresses = items;
     });
-  }
-
-  /// アドレスを保存
-  Future<void> _saveAddresses() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(storageKey, addresses);
   }
 
   /// 新しいアドレス生成
   void generateAddress() async {
-    final useCase = CreateBitcoinAddressUseCase(bitcoinCrypto: _bitcoinCrypto);
-    final (address, privateKey, _) = useCase.execute();
+    final createUseCase =
+        CreateBitcoinAddressUseCase(bitcoinCrypto: _bitcoinCrypto);
+    final (address, privateKey, _) = createUseCase.execute();
 
-    // 秘密鍵を安全に保存
-    final secureKeyStore = SecureKeyStore();
-    await secureKeyStore.savePrivateKey(address, privateKey);
+    final saveUseCase = SaveBitcoinAddressAndPrivateKeyUseCase(
+      bitcoinRepository: _bitcoinRepository,
+      privateKeyRepository: _privateKeyRepository,
+    );
 
+    final updated = await saveUseCase.execute(address, privateKey);
+    if (!mounted) return;
     setState(() {
-      addresses.add(address);
+      addresses = updated;
     });
-
-    _saveAddresses();
   }
 
   /// アドレス削除
   void deleteAddress(String address) async {
+    final deleteUseCase = DeleteAddressUseCase(
+      bitcoinRepository: _bitcoinRepository,
+      privateKeyRepository: _privateKeyRepository,
+    );
+
+    final updated = await deleteUseCase.execute(address);
+    if (!mounted) return;
     setState(() {
-      addresses.removeWhere((a) => a == address);
+      addresses = updated;
     });
 
-    final secureKeyStore = SecureKeyStore();
-    await secureKeyStore.deletePrivateKey(address);
-    await _saveAddresses();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('アドレスを削除しました')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('アドレスを削除しました')),
+    );
   }
 
   /// Explorerを開く
