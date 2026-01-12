@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
+
 import 'package:bit_saifu/src/lib/bitcoin/data/dto/utxo_dto.dart';
 import 'package:bit_saifu/src/lib/bitcoin/domain/entity/utxo.dart';
 
@@ -27,12 +29,14 @@ void main() {
         confirmed: true,
       );
 
-      final entity = dto.toEntity();
+      final script = Uint8List.fromList([0x00, 0x01]);
+      final entity = dto.toEntity(script);
       expect(entity, isA<Utxo>());
       expect(entity.txid, 'abc');
       expect(entity.vout, 1);
       expect(entity.value, 12345);
       expect(entity.confirmed, isTrue);
+      expect(entity.scriptPubKey, script);
     });
   });
 }

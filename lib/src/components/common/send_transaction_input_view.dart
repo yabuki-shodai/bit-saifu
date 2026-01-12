@@ -17,6 +17,7 @@ class FeeOption {
 
 class SendTransactionInputView extends StatefulWidget {
   final int balanceSatoshi;
+  final Future<int> Function(int feeRate)? onMaxAmountRequested;
   final void Function({
     required String address,
     required int amountSatoshi,
@@ -28,6 +29,7 @@ class SendTransactionInputView extends StatefulWidget {
   const SendTransactionInputView({
     super.key,
     required this.balanceSatoshi,
+    this.onMaxAmountRequested,
     required this.onSubmit,
     required this.onClose,
   });
@@ -69,6 +71,8 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
   ];
 
   late FeeOption selectedFee;
+  bool _isMaxSelected = false;
+  bool _isMaxLoading = false;
 
   @override
   void initState() {
@@ -83,15 +87,55 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
     return (btc * satoshiPerBtc).round();
   }
 
+  int _estimateTxSize({
+    int inputCount = 1,
+    int outputCount = 2,
+  }) {
+    return 10 + (148 * inputCount) + (34 * outputCount);
+  }
+
+  int _estimateFeeSatoshi() {
+    return _estimateTxSize() * selectedFee.satPerVByte;
+  }
+
   bool _isValidBitcoinAddress(String value) {
     return value.startsWith('m') ||
         value.startsWith('n') ||
         value.startsWith('tb1');
   }
 
-  void _onMax() {
-    _amountController.text = balanceBtc.toStringAsFixed(8);
-    setState(() => amountError = null);
+  Future<void> _setMaxAmount() async {
+    if (widget.onMaxAmountRequested == null) {
+      final fee = _estimateFeeSatoshi();
+      final available = widget.balanceSatoshi - fee;
+      final max = available > 0 ? available : 0;
+      _amountController.text =
+          (max / satoshiPerBtc).toStringAsFixed(8);
+      return;
+    }
+
+    setState(() {
+      _isMaxLoading = true;
+    });
+    try {
+      final max = await widget.onMaxAmountRequested!(selectedFee.satPerVByte);
+      _amountController.text =
+          (max / satoshiPerBtc).toStringAsFixed(8);
+      amountError = null;
+    } catch (error) {
+      amountError = error.toString();
+    } finally {
+      setState(() {
+        _isMaxLoading = false;
+      });
+    }
+  }
+
+  void _onMax() async {
+    await _setMaxAmount();
+    setState(() {
+      _isMaxSelected = true;
+    });
   }
 
   void _onContinue() {
@@ -110,11 +154,17 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
       addressError = null;
     }
 
+    final fee = _estimateFeeSatoshi();
+    final total = satoshi + fee;
+
     if (satoshi <= 0) {
       amountError = '送金額を入力してください';
       hasError = true;
-    } else if (satoshi > widget.balanceSatoshi) {
-      amountError = '残高が不足しています';
+    } else if (satoshi < 546) {
+      amountError = '送金額が小さすぎます';
+      hasError = true;
+    } else if (total > widget.balanceSatoshi) {
+      amountError = '手数料を含めると残高が不足しています';
       hasError = true;
     } else {
       amountError = null;
@@ -140,6 +190,9 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
         setState(() {
           selectedFee = option;
         });
+        if (_isMaxSelected) {
+          _setMaxAmount();
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -243,6 +296,13 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
+              onChanged: (_) {
+                if (_isMaxSelected) {
+                  setState(() {
+                    _isMaxSelected = false;
+                  });
+                }
+              },
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
@@ -271,7 +331,10 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
                   'Available: ${balanceBtc.toStringAsFixed(8)} BTC',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                TextButton(onPressed: _onMax, child: const Text('MAX')),
+                TextButton(
+                  onPressed: _isMaxLoading ? null : _onMax,
+                  child: const Text('MAX'),
+                ),
               ],
             ),
 

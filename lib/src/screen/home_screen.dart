@@ -33,6 +33,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
   /// 新しいアドレス生成
   void generateAddress() async {
     final updated = await _bitcoinService.createAddress();
+
     if (!mounted) return;
     setState(() {
       addresses = updated;
@@ -61,6 +62,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
   }
 
   void showSendViewBottomSheet(String address, double balance) {
+    final fromAddress = address;
     final balanceSatoshi = (balance * satoshiPerBtc).toInt();
     showModalBottomSheet(
       context: context,
@@ -77,6 +79,12 @@ class _BitcoinPageState extends State<BitcoinPage> {
             top: false,
             child: SendTransactionInputView(
               balanceSatoshi: balanceSatoshi,
+              onMaxAmountRequested: (feeRate) {
+                return _bitcoinService.estimateMaxSendable(
+                  fromAddress: fromAddress,
+                  feeRate: feeRate,
+                );
+              },
               onClose: () => Navigator.of(context).pop(),
               onSubmit: (
                   {required address,
@@ -86,19 +94,25 @@ class _BitcoinPageState extends State<BitcoinPage> {
                 debugPrint('To: $address');
                 debugPrint('Amount: $amountSatoshi satoshi');
                 debugPrint('Fee Rate: $feeRate sat/vByte');
-                final allUtxos =
-                    await _bitcoinService.collectAllUtxos(addresses);
-
-                final result = _bitcoinService.selectUtxos(
-                  utxos: allUtxos,
-                  sendAmountSatoshi: amountSatoshi,
-                  feeRate: 5, // 例：5 sat/vByte
-                );
-
-                debugPrint('Inputs: ${result.selectedUtxos.length}');
-                debugPrint('Fee: ${result.fee} sat');
-                debugPrint('Change: ${result.change} sat');
-                debugPrint('TxSize: ${result.txSize} vB');
+                try {
+                  final txid = await _bitcoinService.sendP2pkhTransaction(
+                    fromAddress: fromAddress,
+                    toAddress: address,
+                    amountSatoshi: amountSatoshi,
+                    feeRate: feeRate,
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('送付しました。')),
+                  );
+                } catch (error) {
+                  debugPrint('Send failed: $error');
+                  debugPrintStack();
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('失敗しました。')),
+                  );
+                }
               },
             ),
           ),
@@ -173,8 +187,6 @@ class _BitcoinPageState extends State<BitcoinPage> {
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 16),
 
                     SelectableText(
                       address,
@@ -289,7 +301,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
                 ),
               ),
 
-              // 右上の送金ボタン
+              // 右上の送金ボタン（P2PKHのみ）
               Positioned(
                 top: 8,
                 right: 8,

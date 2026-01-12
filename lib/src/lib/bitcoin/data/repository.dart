@@ -1,3 +1,4 @@
+import 'package:bit_saifu/src/lib/bitcoin/crypto/bitcoin.dart';
 import 'package:bit_saifu/src/lib/bitcoin/data/bitcoin_api.dart';
 import 'package:bit_saifu/src/lib/bitcoin/domain/entity/utxo.dart';
 import 'dart:typed_data';
@@ -9,9 +10,18 @@ class BitcoinRepository {
 
   Future<List<Utxo>> getUtxos(String address) async {
     final bitcoinClient = BlockstreamBitcoinClient();
+    try {
+      final scriptPubKey = BitcoinCrypto().addressToScriptPubKey(address);
+      final dtos = await bitcoinClient.getUtxos(address);
+      return dtos.map((dto) => dto.toEntity(scriptPubKey)).toList();
+    } catch (e) {
+      return [];
+    }
+  }
 
-    final dtos = await bitcoinClient.getUtxos(address);
-    return dtos.map((dto) => dto.toEntity()).toList();
+  Future<String> broadcastTransaction(String rawTxHex) async {
+    final bitcoinClient = BlockstreamBitcoinClient();
+    return bitcoinClient.broadcastTransaction(rawTxHex);
   }
 
   Future<List<Utxo>> collectAllUtxos(List<String> addresses) async {

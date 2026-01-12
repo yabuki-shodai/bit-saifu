@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:bit_saifu/src/lib/bitcoin/domain/entity/utxo.dart';
 
 class UtxoDto {
@@ -22,12 +24,13 @@ class UtxoDto {
     );
   }
 
-  Utxo toEntity() {
+  Utxo toEntity(Uint8List scriptPubKey) {
     return Utxo(
       txid: txid,
       vout: vout,
       value: value,
       confirmed: confirmed,
+      scriptPubKey: scriptPubKey,
     );
   }
 }
