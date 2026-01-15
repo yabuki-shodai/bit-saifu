@@ -103,7 +103,7 @@ class _BitcoinPageState extends State<BitcoinPage> {
                   );
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('送付しました。')),
+                    SnackBar(content: Text('送付しました。\n$txid')),
                   );
                 } catch (error) {
                   debugPrint('Send failed: $error');
@@ -130,195 +130,197 @@ class _BitcoinPageState extends State<BitcoinPage> {
       context: context,
       builder: (context) {
         return Dialog(
-          insetPadding: const EdgeInsets.all(24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Stack(
-            children: [
-              // メインコンテンツ
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Receive Bitcoin',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    // 残高を表示
-                    Text(
-                      'Balance: $balance BTC',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-                    // QRコード
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 16,
+            insetPadding: const EdgeInsets.all(24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: SingleChildScrollView(
+              child: Stack(
+                children: [
+                  // メインコンテンツ
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Receive Bitcoin',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
-                        ],
-                      ),
-                      child: SizedBox(
-                        width: 200,
-                        height: 200,
-                        child: PrettyQrView.data(
-                          data: address,
-                          decoration: const PrettyQrDecoration(
-                            shape: PrettyQrSmoothSymbol(
-                              roundFactor: 0.6,
+                        ),
+
+                        // 残高を表示
+                        Text(
+                          'Balance: $balance BTC',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+                        // QRコード
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 16,
+                              ),
+                            ],
+                          ),
+                          child: SizedBox(
+                            width: 200,
+                            height: 200,
+                            child: PrettyQrView.data(
+                              data: address,
+                              decoration: const PrettyQrDecoration(
+                                shape: PrettyQrSmoothSymbol(
+                                  roundFactor: 0.6,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
 
-                    SelectableText(
-                      address,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        icon: const Icon(Icons.open_in_new),
-                        label: const Text('Explorerを開く'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          openExplorer(address);
-                        },
-                      ),
-                    ),
-
-                    // utxoを表示
-                    const SizedBox(height: 16),
-
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'UTXO',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: utxos.length,
-                      itemBuilder: (context, index) {
-                        final utxo = utxos[index];
-                        final btcValue = _bitcoinService.calcBalance([utxo]);
-
-                        return Card(
-                          elevation: 1,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        SelectableText(
+                          address,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Amount: $btcValue BTC',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'txid: ${utxo.txid}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                Text(
-                                  'vout: ${utxo.vout}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            icon: const Icon(Icons.open_in_new),
+                            label: const Text('Explorerを開く'),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              openExplorer(address);
+                            },
+                          ),
+                        ),
+
+                        // utxoを表示
+                        const SizedBox(height: 16),
+
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'UTXO',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        );
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: utxos.length,
+                          itemBuilder: (context, index) {
+                            final utxo = utxos[index];
+                            final btcValue =
+                                _bitcoinService.calcBalance([utxo]);
+
+                            return Card(
+                              elevation: 1,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Amount: $btcValue BTC',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'txid: ${utxo.txid}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    Text(
+                                      'vout: ${utxo.vout}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('閉じる'),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 左上の削除ボタン
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: IconButton(
+                      tooltip: '削除',
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: Colors.red.shade400,
+                      ),
+                      onPressed: () {
+                        showDeleteConfirmDialog(address);
                       },
                     ),
+                  ),
 
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('閉じる'),
+                  // 右上の送金ボタン（P2PKHのみ）
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: IconButton(
+                      tooltip: '送金',
+                      icon: Icon(
+                        Icons.send,
+                        color: Colors.blue.shade400,
+                      ),
+                      onPressed: () {
+                        showSendViewBottomSheet(address, balance);
+                      },
                     ),
-                  ],
-                ),
-              ),
-
-              // 左上の削除ボタン
-              Positioned(
-                top: 8,
-                left: 8,
-                child: IconButton(
-                  tooltip: '削除',
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: Colors.red.shade400,
                   ),
-                  onPressed: () {
-                    showDeleteConfirmDialog(address);
-                  },
-                ),
+                ],
               ),
-
-              // 右上の送金ボタン（P2PKHのみ）
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  tooltip: '送金',
-                  icon: Icon(
-                    Icons.send,
-                    color: Colors.blue.shade400,
-                  ),
-                  onPressed: () {
-                    showSendViewBottomSheet(address, balance);
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
+            ));
       },
     );
   }
