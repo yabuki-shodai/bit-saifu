@@ -27,10 +27,12 @@ class BitcoinService {
         signer = signer ?? BitcoinSigner(),
         serializer = serializer ?? BitcoinTransactionSerializer();
 
+  // 保存済みアドレス一覧を取得
   Future<List<String>> loadAddresses() async {
     return repository.getAllAddresses();
   }
 
+  // 新しいアドレスを生成して保存
   Future<List<String>> createAddress() async {
     final privateKey = crypto.generatePrivateKey();
     final publicKey = crypto.privateKeyToPublicKey(privateKey);
@@ -48,6 +50,7 @@ class BitcoinService {
     return addresses;
   }
 
+  // アドレスを削除して保存
   Future<List<String>> deleteAddress(String address) async {
     final addresses = await repository.getAllAddresses();
     if (!addresses.contains(address)) {
@@ -61,10 +64,12 @@ class BitcoinService {
     return addresses;
   }
 
+  // アドレスに紐づく秘密鍵を取得
   Future<Uint8List?> loadPrivateKey(String address) async {
     return repository.loadPrivateKey(address);
   }
 
+  // アドレスに紐づくUTXOを取得
   Future<List<Utxo>> getUtxos(String address) async {
     try {
       return repository.getUtxos(address);
@@ -73,15 +78,18 @@ class BitcoinService {
     }
   }
 
+  /// 複数アドレスのUTXOを集約
   Future<List<Utxo>> collectAllUtxos(List<String> addresses) async {
     return repository.collectAllUtxos(addresses);
   }
 
+  // UTXOのsatoshi合計をBTCへ換算
   double calcBalance(List<Utxo> utxos) {
     final balance = utxos.fold(0, (sum, u) => sum + u.value);
     return balance / satoshiPerBtc;
   }
 
+  // 送金可能な最大額を推定
   Future<int> estimateMaxSendable({
     required String fromAddress,
     required int feeRate,
@@ -109,6 +117,7 @@ class BitcoinService {
     return max;
   }
 
+  /// 送金額と手数料を満たすUTXOを選択
   UtxoSelectionResult selectUtxos({
     required List<Utxo> utxos,
     required int sendAmountSatoshi,
@@ -152,6 +161,7 @@ class BitcoinService {
     throw Exception('残高不足');
   }
 
+  /// トランザクションサイズを推定
   int _estimateTxSize({
     required int inputCount,
     required int outputCount,
@@ -159,6 +169,7 @@ class BitcoinService {
     return 10 + (148 * inputCount) + (34 * outputCount);
   }
 
+  /// P2PKHアドレスのトランザクションをビルド
   Future<Transaction> buildUnsignedP2pkhTransaction({
     required String fromAddress,
     required String toAddress,
@@ -177,6 +188,7 @@ class BitcoinService {
     return transaction;
   }
 
+  /// P2PKHアドレスのトランザクションをビルド
   Future<(Transaction transaction, List<Utxo> selectedUtxos)>
       _buildUnsignedP2pkhTransactionWithSelection({
     required String fromAddress,
@@ -234,6 +246,7 @@ class BitcoinService {
     );
   }
 
+  /// P2PKHアドレスかどうかを確認
   void _ensureP2pkhAddress(String address) {
     final type = BitcoinAddressDetector.detect(address);
     if (type != BitcoinAddressType.p2pkh) {
@@ -241,6 +254,7 @@ class BitcoinService {
     }
   }
 
+  /// アドレスを正規化
   String _normalizeAddress(String address) {
     final normalized = address.trim();
     if (normalized.isEmpty) {
@@ -249,6 +263,7 @@ class BitcoinService {
     return normalized;
   }
 
+  /// P2PKHアドレスのトランザクションを署名
   Transaction signP2pkh(
     Transaction transaction,
     List<P2pkhInputSigningData> inputs,
@@ -256,14 +271,17 @@ class BitcoinService {
     return signer.signP2pkhTransaction(transaction, inputs);
   }
 
+  /// トランザクションをバイト列へ変換
   Uint8List buildRawTransaction(Transaction transaction) {
     return serializer.serialize(transaction);
   }
 
+  /// トランザクションをバイト列へ変換
   String buildRawTransactionHex(Transaction transaction) {
     return serializer.toHex(transaction);
   }
 
+  /// P2PKHアドレスのトランザクションを送信
   Future<String> sendP2pkhTransaction({
     required String fromAddress,
     required String toAddress,
@@ -312,5 +330,4 @@ class BitcoinService {
 
     return repository.broadcastTransaction(rawHex);
   }
-
 }

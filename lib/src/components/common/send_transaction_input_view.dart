@@ -1,3 +1,4 @@
+import 'package:bit_saifu/src/components/common/qrcode_scan_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -109,8 +110,7 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
       final fee = _estimateFeeSatoshi();
       final available = widget.balanceSatoshi - fee;
       final max = available > 0 ? available : 0;
-      _amountController.text =
-          (max / satoshiPerBtc).toStringAsFixed(8);
+      _amountController.text = (max / satoshiPerBtc).toStringAsFixed(8);
       return;
     }
 
@@ -119,8 +119,7 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
     });
     try {
       final max = await widget.onMaxAmountRequested!(selectedFee.satPerVByte);
-      _amountController.text =
-          (max / satoshiPerBtc).toStringAsFixed(8);
+      _amountController.text = (max / satoshiPerBtc).toStringAsFixed(8);
       amountError = null;
     } catch (error) {
       amountError = error.toString();
@@ -251,6 +250,23 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
     );
   }
 
+  // QRコードを読み取る
+  Future<void> _openQrScanner() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const QrcodeScanView(),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _addressController.text = result;
+        addressError = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -284,6 +300,10 @@ class _SendTransactionInputViewState extends State<SendTransactionInputView> {
                 errorText: addressError,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
+                ),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.qr_code_scanner),
+                  onPressed: _openQrScanner,
                 ),
               ),
             ),
