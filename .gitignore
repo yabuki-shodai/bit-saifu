@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# freezed
+**/lib/src/lib/models/**/*.freezed.dart
+**/lib/src/lib/models/**/*.g.dart

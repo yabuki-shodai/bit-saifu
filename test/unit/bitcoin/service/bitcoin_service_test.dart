@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:bit_saifu/src/lib/bitcoin/domain/entity/utxo.dart';
-import 'package:bit_saifu/src/lib/bitcoin/service/bitcoin_service.dart';
+import 'package:bit_saifu/src/lib/crypto/bitcoin/domain/entity/utxo.dart';
+import 'package:bit_saifu/src/lib/crypto/bitcoin/service/bitcoin_service.dart';
 
 void main() {
   group('BitcoinService', () {

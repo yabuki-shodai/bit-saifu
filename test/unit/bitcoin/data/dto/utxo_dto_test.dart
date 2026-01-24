@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:typed_data';
 
-import 'package:bit_saifu/src/lib/bitcoin/data/dto/utxo_dto.dart';
-import 'package:bit_saifu/src/lib/bitcoin/domain/entity/utxo.dart';
+import 'package:bit_saifu/src/lib/crypto/bitcoin/data/dto/utxo_dto.dart';
+import 'package:bit_saifu/src/lib/crypto/bitcoin/domain/entity/utxo.dart';
 
 void main() {
   group('UtxoDto', () {

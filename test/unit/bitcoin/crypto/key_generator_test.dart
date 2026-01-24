@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:bit_saifu/src/lib/bitcoin/crypto/bitcoin.dart';
+import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/bitcoin.dart';
 
 void main() {
   group('BitcoinKeyGenerator', () {

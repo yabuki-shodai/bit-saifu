@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
-import 'package:bit_saifu/src/lib/ethereum/ethereum.dart';
+import 'package:bit_saifu/src/lib/crypto/ethereum/ethereum.dart';
 
 class EthereumPage extends StatefulWidget {
   const EthereumPage({super.key});

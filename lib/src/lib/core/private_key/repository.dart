@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:bit_saifu/src/lib/secure/secure_key_store.dart';
+import 'package:bit_saifu/src/lib/core/secure/secure_key_store.dart';
 
 class PrivateKeyRepository {
   final SecureKeyStore secureKeyStore;

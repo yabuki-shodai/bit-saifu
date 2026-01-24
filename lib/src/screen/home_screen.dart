@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:bit_saifu/src/components/common/send_transaction_input_view.dart';
-import 'package:bit_saifu/src/lib/bitcoin/service/bitcoin_service.dart';
+import 'package:bit_saifu/src/lib/crypto/bitcoin/service/bitcoin_service.dart';
 
 class BitcoinPage extends StatefulWidget {
   const BitcoinPage({super.key});
