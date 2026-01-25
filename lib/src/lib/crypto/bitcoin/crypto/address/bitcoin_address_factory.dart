@@ -1,13 +1,16 @@
 import 'dart:typed_data';
+
 import 'package:bit_saifu/src/lib/type/bitcoin/address/bitcoin_address_type.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/address/bitcoin_address.dart';
 import 'package:bit_saifu/src/lib/type/network/crypto_network.dart';
 
 class BitcoinAddressFactory {
   final CryptoNetwork network;
+
   BitcoinAddressFactory({required this.network});
 
-  BitcoinAddress createAddress({
+  // 公開鍵からアドレスを生成
+  BitcoinAddress fromPublicKey({
     required Uint8List publicKey,
     required BitcoinAddressType type,
   }) {
@@ -24,21 +27,80 @@ class BitcoinAddressFactory {
   }
 
   // ============================================================
-  // 共通ユーティリティ
+  // utility methods（アドレス文字列 → BitcoinAddress（解析））
   // ============================================================
 
-  /// TODO: P2PKHアドレスの生成を実装する
-  static BitcoinAddress _buildP2PKHAddress(Uint8List publicKey) {
-    return BitcoinAddress(address: "p2pkh", type: BitcoinAddressType.p2pkh);
+  // アドレス文字列からBitcoinAddressを生成
+  BitcoinAddress fromAddress({
+    required String address,
+  }) {
+    if (_isP2TR(address)) {
+      return BitcoinAddress(
+        address: address,
+        type: BitcoinAddressType.p2tr,
+      );
+    }
+
+    if (_isBech32(address)) {
+      return BitcoinAddress(
+        address: address,
+        type: BitcoinAddressType.p2wpkh,
+      );
+    }
+
+    if (_isBase58(address)) {
+      return BitcoinAddress(
+        address: address,
+        type: BitcoinAddressType.p2pkh,
+      );
+    }
+
+    throw Exception('未対応のBitcoinアドレス形式');
   }
 
-  /// TODO: P2WPKHアドレスの生成を実装する
-  static BitcoinAddress _buildP2WPKHAddress(Uint8List publicKey) {
-    return BitcoinAddress(address: "p2wpkh", type: BitcoinAddressType.p2wpkh);
+  // ============================================================
+  // utility methods（生成）
+  // ============================================================
+
+  BitcoinAddress _buildP2PKHAddress(Uint8List publicKey) {
+    // TODO: HASH160 + Base58Check
+    return BitcoinAddress(
+      address: 'p2pkh_dummy',
+      type: BitcoinAddressType.p2pkh,
+    );
   }
 
-  /// TODO: P2TRアドレスの生成を実装する
-  static BitcoinAddress _buildP2TRAddress(Uint8List publicKey) {
-    return BitcoinAddress(address: "p2tr", type: BitcoinAddressType.p2tr);
+  BitcoinAddress _buildP2WPKHAddress(Uint8List publicKey) {
+    // TODO: HASH160 + bech32
+    return BitcoinAddress(
+      address: 'bc1_dummy',
+      type: BitcoinAddressType.p2wpkh,
+    );
+  }
+
+  BitcoinAddress _buildP2TRAddress(Uint8List publicKey) {
+    // TODO: x-only pubkey + bech32m
+    return BitcoinAddress(
+      address: 'bc1p_dummy',
+      type: BitcoinAddressType.p2tr,
+    );
+  }
+
+  // ============================================================
+  // private helpers（判定）
+  // ============================================================
+
+  bool _isBech32(String address) {
+    return address.startsWith('bc1') || address.startsWith('tb1');
+  }
+
+  bool _isP2TR(String address) {
+    return address.startsWith('bc1p') || address.startsWith('tb1p');
+  }
+
+  bool _isBase58(String address) {
+    return address.startsWith('1') ||
+        address.startsWith('m') ||
+        address.startsWith('n');
   }
 }

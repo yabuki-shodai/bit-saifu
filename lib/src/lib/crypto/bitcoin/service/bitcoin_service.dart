@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 import 'package:bit_saifu/src/lib/core/key_pair/key_pair_generator.dart';
+import 'package:bit_saifu/src/lib/crypto/bitcoin/builder/input_builder.dart';
+import 'package:bit_saifu/src/lib/crypto/bitcoin/builder/output_builder.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/address/bitcoin_address_factory.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/bitcoin.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/bitcoin_address_detector.dart'
@@ -7,7 +9,6 @@ import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/bitcoin_address_detector
 import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/bitcoin_signer.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/bitcoin_transaction.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/crypto/bitcoin_transaction_serializer.dart';
-import 'package:bit_saifu/src/lib/crypto/bitcoin/data/repository.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/domain/entity/transaction.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/domain/entity/tx_output.dart';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/domain/entity/utxo.dart';
@@ -16,6 +17,8 @@ import 'package:bit_saifu/src/lib/models/bitcoin/bitcoin_entity.dart';
 import 'package:bit_saifu/src/lib/type/bitcoin/address/bitcoin_address_type.dart';
 import 'package:bit_saifu/src/lib/type/bitcoin/bitcoin_utxo.dart';
 import 'package:bit_saifu/src/lib/type/network/crypto_network.dart';
+
+import 'package:bit_saifu/src/lib/crypto/bitcoin/repository/bitcoin_repository.dart';
 
 const int satoshiPerBtc = 100000000;
 
@@ -355,7 +358,9 @@ class NewworkBitcoinService implements BitcoinServiceBase {
   });
 
   @override
-  Future<void> deleteAddress({required BitcoinEntity address}) async {}
+  Future<void> deleteAddress({required BitcoinEntity bitcoinEntity}) async {
+    await repository.deleteBitcoinEntity(bitcoinEntity);
+  }
 
   @override
   Future<BitcoinEntity> generateAddress(
@@ -372,8 +377,8 @@ class NewworkBitcoinService implements BitcoinServiceBase {
       publicKey: publicKey.toString(),
       network: network,
     );
-    // TODO:ビットコインアドレスを保存する
-
+    // ビットコインエンティティを保存
+    await repository.saveBitcoinEntity(bitcoinEntity);
     return bitcoinEntity;
   }
 
@@ -395,16 +400,8 @@ class NewworkBitcoinService implements BitcoinServiceBase {
 
   @override
   Future<List<BitcoinEntity>> loadAddresses() async {
-    // TODO: BitcoinEntifyを保存できるようにする
-    final addresses = await repository.getAllAddresses();
-    return addresses
-        .map((address) => BitcoinEntity(
-              address: address,
-              type: BitcoinAddressType.p2pkh,
-              publicKey: "",
-              network: network,
-            ))
-        .toList();
+    final bitcoinEntities = await repository.getBitcoinEntities();
+    return bitcoinEntities;
   }
 
   @override
@@ -415,12 +412,10 @@ class NewworkBitcoinService implements BitcoinServiceBase {
       required int feeRate,
       String? changeAddress}) {
     /// TODO: ビットコインを送金する
-    return Future.value(true);
-  }
+    final inputBuilder = InputBuilder();
+    final outputBuilder = OutputBuilder();
+    final transactionBuilder = TransactionBuilder();
 
-  @override
-  Future<bool> validateAddress({required String address}) {
-    /// TODO: ビットコインアドレスを検証する
     return Future.value(true);
   }
 }

@@ -137,3 +137,4 @@ class BitcoinCrypto implements CryptoCore {
     );
   }
 }
+

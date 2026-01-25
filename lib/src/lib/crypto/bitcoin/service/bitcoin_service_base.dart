@@ -9,10 +9,7 @@ abstract class BitcoinServiceBase {
   Future<BitcoinEntity> generateAddress({required BitcoinAddressType type});
 
   /// ビットコインアドレスを削除
-  Future<void> deleteAddress({required BitcoinEntity address});
-
-  // ビットコインアドレスを検証
-  Future<bool> validateAddress({required String address});
+  Future<void> deleteAddress({required BitcoinEntity bitcoinEntity});
 
   /// ビットコインアドレスに紐づくUTXOを取得
   Future<List<BitcoinUtxo>> getUtxos({required BitcoinEntity bitcoinEntity});

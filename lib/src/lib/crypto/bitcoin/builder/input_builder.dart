@@ -2,10 +2,19 @@ import 'dart:typed_data';
 import 'package:bit_saifu/src/lib/crypto/bitcoin/utils/bitcoin_utils.dart';
 import 'package:bit_saifu/src/lib/type/bitcoin/bitcoin.dart';
 
-class InputBuilder {
+abstract class InputBuilderBase {
+  TxInput fromUtxo({
+    required BitcoinUtxo utxo,
+    required Uint8List signature,
+    required Uint8List publicKey,
+  });
+}
+
+class InputBuilder implements InputBuilderBase {
   final BitcoinUtils bitcoinUtils = BitcoinUtils();
 
-  static TxInput fromUtxo({
+  @override
+  TxInput fromUtxo({
     required BitcoinUtxo utxo,
     required Uint8List signature,
     required Uint8List publicKey,
